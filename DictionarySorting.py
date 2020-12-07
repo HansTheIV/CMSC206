@@ -27,13 +27,15 @@ URL_ROW = 4  # adjusted for columns being indexed at 1 in csv
 
 NUM_OF_SONGS += 1  # compensate for headers (first song from spotify CSVs is listed in row 3)
 
+
+# ---- Cheolhong Ahn
 csvFile = requests.get("https://spotifycharts.com/regional/us/weekly/latest/download", headers={
     'User-Agent': 'Mozilla/5.0'})  # we can replace 28 and 44 with this. Gets csv file directly from spotify.chart website.
 fileData = StringIO(csvFile.text)  # requests and StringIO required to bypass  error:  urllib2.HTTPError: HTTP Error 403: Forbidden
 inputCSV = pd.read_csv(fileData)
 
 
-def checkCPUcount():
+def checkCPUcount():  # ---- Ethan Ringel
     cores = mp.cpu_count()
     processes = int(cores / 2)
     print("Found " + str(cores) + " threads, using " + str(processes) + " processes.\n")
@@ -96,7 +98,7 @@ def numberToMode(modeNum):
 
 # made a function so multiprocessing can work
 
-def SongDataSocket(i):
+def SongDataSocket(i):  # ---- Ethan Ringel
     url = inputCSV.iloc[i - 1][
         URL_ROW]  # sets the song URL for this iteration of the loop, constant just in case spotify decides to reformat its
 
@@ -134,7 +136,7 @@ def log_results(result):
     pbar.update(1)
 
 
-def main(allowed_processes):
+def main(allowed_processes):  # ----Ethan Ringel
     pool = mp.Pool(processes=allowed_processes)  # creates a multiprocessing pool to fill the dictionary file
 
     for i in range(3, 203):
@@ -170,14 +172,14 @@ if __name__ == '__main__':
             f.write(json.dumps(c.songAttributeDict))
             DataUsable = json.dumps(c.songAttributeDict)
 
-        # after this, DataUsable is set to what it needs to be regardless.
+        # after this, DataUsable is set to what it needs to be regardless, but there will also be a file with the data so it does not need to be retrieved again.
 
     # plots -------------------------------------------------------------------------------------------------------
 
 
 
 
-    # Key frequency
+    # Key frequency ---- Ethan Ringel
     keyFreq = {"C": 0, "C#": 0, "D": 0, "Eb": 0, "F": 0, "F#": 0, "G": 0, "G#": 0, "A": 0, "Bb": 0, "B": 0}
     for num in range(1, 200):
         tempKey = DataUsable[str(num)]['key']
@@ -205,7 +207,7 @@ if __name__ == '__main__':
     plt.show()
 
 
-    # Artist Word Cloud
+    # Artist Word Cloud ---- Cheolhong Ahn
     with open('SpotifyDataDict.txt', 'r') as inf:
         data = eval(inf.read())
     dataPd = pd.DataFrame.from_dict(data, orient='index')
@@ -218,7 +220,7 @@ if __name__ == '__main__':
     plt.axis("off")
     plt.show()
 
-    #Artist Diversity Chart
+    #Artist Diversity Chart ---- Cheolhong Ahn
     # This shows how many artists are featured in top 200 chart to see how diverse the music chart is at the moment.
 
     with open('SpotifyDataDict.txt', 'r') as inf:
@@ -237,7 +239,7 @@ if __name__ == '__main__':
     plt.show()
 
 
-    #Tempo Chart
+    #Tempo Chart ---- Cheolhong Ahn
     # This graph shows that tempo is evenly distributed among top 200 chart by rank and shows no significant correlation between tempo and rank.
     # However, one thing to note is major songs showed even distribution around 80~160bpm  while minor songs were generally faster 120~160bpm
     #

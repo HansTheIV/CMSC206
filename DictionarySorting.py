@@ -9,6 +9,8 @@ from io import StringIO  #
 import json
 import pandas as pd
 from matplotlib import pyplot as plt
+import plotly.express as px
+from wordcloud import WordCloud
 import multiprocessing as mp
 from multiprocessing import Pool
 
@@ -27,9 +29,8 @@ NUM_OF_SONGS += 1  # compensate for headers (first song from spotify CSVs is lis
 
 csvFile = requests.get("https://spotifycharts.com/regional/us/weekly/latest/download", headers={
     'User-Agent': 'Mozilla/5.0'})  # we can replace 28 and 44 with this. Gets csv file directly from spotify.chart website.
-filedata = StringIO(
-    csvFile.text)  # requests and StringIO required to bypass  error:  urllib2.HTTPError: HTTP Error 403: Forbidden
-inputCSV = pd.read_csv(filedata)
+fileData = StringIO(csvFile.text)  # requests and StringIO required to bypass  error:  urllib2.HTTPError: HTTP Error 403: Forbidden
+inputCSV = pd.read_csv(fileData)
 
 
 def checkCPUcount():
@@ -44,10 +45,7 @@ class SongDataClass:
     songAttributeDict = dict()
 
 
-
 c = SongDataClass()
-
-
 
 
 # each song data list will contain, in order, ['name'], ['artist], ['duration'], ['loudness'], ['tempo'], ['key'], and ['mode']
@@ -78,18 +76,18 @@ c = SongDataClass()
 # 1 = major
 
 
-def numberToKey(num):
+def numberToKey(keyNum):
     keys = {0: "C", 1: "C#", 2: "D", 3: "Eb", 4: "E", 5: "F", 6: "F#", 7: "G", 8: "G#", 9: "A", 10: "Bb", 11: "B"}
     try:
-        return keys[num];
+        return keys[keyNum]
     except KeyError:
         return "Invalid"
 
 
-def numberToMode(num):
+def numberToMode(modeNum):
     modes = {0: "Minor", 1: "Major"}
     try:
-        return modes[num]
+        return modes[modenum]
     except KeyError:
         return "Invalid"
 
@@ -176,9 +174,11 @@ if __name__ == '__main__':
 
     # plots -------------------------------------------------------------------------------------------------------
 
+
+
+
     # Key frequency
-    keyFreq = dict()
-    keyFreq = {"C" : 0, "C#" : 0, "D": 0, "Eb": 0,  "F" : 0, "F#": 0, "G" : 0, "G#" : 0, "A" : 0, "Bb" : 0, "B" : 0}
+    keyFreq = {"C": 0, "C#": 0, "D": 0, "Eb": 0, "F": 0, "F#": 0, "G": 0, "G#": 0, "A": 0, "Bb": 0, "B": 0}
     for num in range(1, 200):
         tempKey = DataUsable[str(num)]['key']
         tempKey = numberToKey(tempKey)
@@ -193,13 +193,70 @@ if __name__ == '__main__':
         dataList.append(keyFreq[key])
     print(labelList)
     KFP = plt.figure()
-    KFP = KFP.add_axes([0.05,0.05,0.90,0.85])
+    KFP = KFP.add_axes([0.05, 0.05, 0.90, 0.85])
     KFP.bar(labelList, dataList)
     KFP.set_title("Frequency of musical keys in Spotify top 200")
     for bar in KFP.patches:
         KFP.annotate(format(bar.get_height(), '.0f'),
                      (bar.get_x() + bar.get_width() / 2,
-                      bar.get_height()/1.5), ha='center', va='center',
+                      bar.get_height() / 1.5), ha='center', va='center',
                      size=8, xytext=(0, 8),
                      textcoords='offset points')
     plt.show()
+
+
+    # Artist Word Cloud
+    with open('SpotifyDataDict.txt', 'r') as inf:
+        data = eval(inf.read())
+    dataPd = pd.DataFrame.from_dict(data, orient='index')
+
+    tracks = ' '.join(
+        [artist for artist in dataPd['name']])  # change inputCSV to newDF if you decide to not change the inputCSV
+
+    wordcloud = WordCloud(max_words=100).generate(tracks)
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis("off")
+    plt.show()
+
+    #Artist Diversity Chart
+    # This shows how many artists are featured in top 200 chart to see how diverse the music chart is at the moment.
+
+    with open('SpotifyDataDict.txt', 'r') as inf:
+        data = eval(inf.read())
+    dataPd = pd.DataFrame.from_dict(data, orient='index')
+
+    totalArtists = len(dataPd['artist'])
+    uniqueArtists = len(dataPd.drop_duplicates(subset=['artist']))
+
+    fig = plt.figure()
+    ax = fig.add_axes([0.075, 0.05, 0.95, 0.95])
+    artistType = ["Unique Artists", "Number of Songs"]
+    artistCount = [uniqueArtists, totalArtists]
+    ax.bar(artistType, artistCount)
+    ax.set_title('Artist Diversity in the top chart')
+    plt.show()
+
+
+    #Tempo Chart
+    # This graph shows that tempo is evenly distributed among top 200 chart by rank and shows no significant correlation between tempo and rank.
+    # However, one thing to note is major songs showed even distribution around 80~160bpm  while minor songs were generally faster 120~160bpm
+    #
+
+
+    with open('SpotifyDataDict.txt', 'r') as inf:
+        data = eval(inf.read())
+    dataPd = pd.DataFrame.from_dict(data, orient='index')
+    dataPd.index = dataPd.index.astype(int)
+    dataPd = dataPd.sort_index(ascending=False)
+
+    print("The average tempo of top 200 song is ", dataPd["tempo"].mean(), "bpm")
+
+    TempoPlot = px.scatter(
+        data_frame=dataPd,
+        y="tempo",
+        x=dataPd.index,
+        color="tempo",
+        hover_name='name',
+        facet_col="mode",
+    )
+    TempoPlot.show()
